@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "~/server/auth/session";
 import { isRoomId } from "~/server/demo/room-id";
+import { publicUrl } from "~/server/http/public-origin";
 
 /**
  * Route guard for the authenticated app (Next.js 16 "proxy", formerly middleware).
@@ -38,7 +39,7 @@ export async function proxy(req: NextRequest) {
 }
 
 function redirectTo(req: NextRequest, pathname: string, params: Record<string, string>): NextResponse {
-  const url = new URL(pathname, req.nextUrl.origin);
+  const url = publicUrl(req, pathname);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   const res = NextResponse.redirect(url, 307);
   res.headers.set("cache-control", "no-store");

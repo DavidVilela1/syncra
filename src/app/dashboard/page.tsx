@@ -9,8 +9,6 @@ import { isRoomId } from "~/server/demo/room-id";
 import { findActiveRoom } from "~/server/demo/rooms";
 
 export const metadata: Metadata = { title: "Live Demo Room" };
-export const dynamic = 'force-dynamic';
-
 
 /**
  * The shared demo room. The proxy has already ensured the visitor holds a

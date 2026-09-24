@@ -24,6 +24,16 @@ const serverSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v === undefined || v.trim() === "" ? undefined : v)),
+  /**
+   * Public origin of the web app as the browser sees it, e.g.
+   * https://web-production-xxxx.up.railway.app (no trailing slash).
+   * Used for redirects and the CSRF Origin check; required behind a proxy.
+   */
+  APP_URL: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()))
+    .pipe(z.url().transform((u) => new URL(u).origin).optional()),
   WS_PORT: z.coerce.number().int().positive().default(3001),
   /**
    * Injected by Railway (and most PaaS). When present the WS server listens on

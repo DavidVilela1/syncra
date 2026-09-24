@@ -10,6 +10,7 @@ import { db } from "~/server/db";
 import { createDemoRoom, joinDemoRoom, type SeatAssignment } from "~/server/demo/rooms";
 import { isRoomId } from "~/server/demo/room-id";
 import { clientIpFromHeaders } from "~/server/http/client-ip";
+import { isAllowedOrigin, publicUrl } from "~/server/http/public-origin";
 import { RATE_LIMIT_POLICIES, getRateLimiter } from "~/server/rate-limit/token-bucket";
 import { getPresenceStore } from "~/server/realtime/presence-store";
 
@@ -26,14 +27,14 @@ import { getPresenceStore } from "~/server/realtime/presence-store";
  */
 
 function landing(req: NextRequest, error: string, extra: Record<string, string> = {}): NextResponse {
-  const url = new URL("/", req.nextUrl.origin);
+  const url = publicUrl(req, "/");
   url.searchParams.set("error", error);
   for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v);
   return NextResponse.redirect(url, { status: 303 });
 }
 
 async function enterRoom(req: NextRequest, seat: SeatAssignment, welcome: boolean): Promise<NextResponse> {
-  const url = new URL("/dashboard", req.nextUrl.origin);
+  const url = publicUrl(req, "/dashboard");
   url.searchParams.set("room", seat.roomId);
   if (welcome) url.searchParams.set("as", seat.persona.handle);
 
@@ -67,8 +68,8 @@ async function allow(req: NextRequest, policy: "demo.create" | "demo.join"): Pro
 /** Create a room. Triggered by the landing page's <form method="post">. */
 export async function POST(req: NextRequest) {
   // CSRF: only our own pages may create rooms and swap the visitor's session.
-  const origin = req.headers.get("origin");
-  if (origin !== req.nextUrl.origin) {
+  // Compared against the PUBLIC origin: behind Railway's proxy, req.nextUrl is the internal address.
+  if (!isAllowedOrigin(req, req.headers.get("origin"))) {
     return new NextResponse("Cross-origin request rejected", { status: 403 });
   }
   if (!(await allow(req, "demo.create"))) return landing(req, "rate_limited");

@@ -162,6 +162,7 @@ Deployed on **Railway** as two services built from the same repository, plus man
 - **Zero-downtime WebSocket redeploys.** On `SIGTERM` the server returns `503` from `/health`, refuses new upgrades and tells clients to reconnect. Clients land on the new deployment with a fresh ticket.
 - **Safe migrations.** They run as Railway's pre-deploy step with drizzle-orm's runtime migrator under a Postgres advisory lock. Concurrent deploys can't apply a migration twice, and a failed migration aborts the deploy.
 - **Private networking.** Services talk to Postgres and Redis over Railway's private network (`*.railway.internal`). Redis connections use `family: 0` for dual-stack DNS, and the WebSocket server binds `::` with an IPv4 fallback.
+- **Proxy-aware origins.** Behind Railway's TLS-terminating edge, Next.js only knows its internal address. Redirects and the CSRF `Origin` check therefore use `APP_URL` (or trusted `X-Forwarded-*` headers), never `req.nextUrl.origin`.
 - **Cross-site WebSockets.** The `web` and `ws` domains are different sites, so the session cookie can't reach the socket host. The browser exchanges its cookie for a 60-second, WebSocket-only ticket on every (re)connect.
 
 Deployment files live in [`railway/`](railway). See `railway/web.env` and `railway/ws.env` for the exact production variables.

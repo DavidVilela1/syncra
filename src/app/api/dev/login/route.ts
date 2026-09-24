@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { SESSION_COOKIE, sessionCookieOptions, signSession } from "~/server/auth/session";
+import { publicUrl } from "~/server/http/public-origin";
 
 /**
  * Passwordless sign-in for SEEDED demo users (there is no real auth provider yet).
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
   const parsed = query.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!parsed.success) return NextResponse.json(z.flattenError(parsed.error), { status: 400 });
 
-  const res = NextResponse.redirect(new URL(parsed.data.next, req.nextUrl.origin));
+  const res = NextResponse.redirect(publicUrl(req, parsed.data.next));
   const ttlSeconds = 60 * 60 * 24 * 7;
   res.cookies.set(
     SESSION_COOKIE,
