@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     const seat = await createDemoRoom(db);
     return enterRoom(req, seat, true);
   } catch (err) {
-    console.error("[demo] room creation failed", err);
+    // Full error in the server logs (Railway → web → Deploy Logs); users get a friendly message.
+    console.error("[demo] room creation failed:", err instanceof Error ? (err.cause ?? err.message) : err);
     return landing(req, "create_failed");
   }
 }

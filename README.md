@@ -154,13 +154,13 @@ Deployed on **Railway** as two services built from the same repository, plus man
 
 | Service | Config | Build | Pre-deploy | Start | Healthcheck |
 |---|---|---|---|---|---|
-| `web` | `/railway/web.json` | `npm run build && npm run build:server` | `npm run db:migrate:prod` | `npm run start` (`next start` on `$PORT`) | `GET /api/health` |
-| `ws` | `/railway/ws.json` | `npm run build:server` (esbuild bundle) | — | `npm run start:ws` (`node dist/ws.mjs` on `$PORT`) | `GET /health` |
+| `web` | `/railway/web.json` | `npm run build` (Next.js + server bundles) | `npm run db:migrate:prod` | `npm run start` (migrate, then `next start` on `$PORT`) | `GET /api/health` |
+| `ws` | `/railway/ws.json` | `npm run build:server` (esbuild bundle) | — | `npm run start:ws` (migrate, then `node dist/ws.mjs` on `$PORT`) | `GET /health` |
 
 - **Two processes, two services.** Each gets its own port, domain, healthcheck and restart policy. A frontend deploy never drops a socket, and a WebSocket crash never takes pages down.
 - **Deep healthchecks.** Both endpoints return `200` only when Postgres (and Redis, if configured) respond. A mis-wired deploy never replaces a healthy one.
 - **Zero-downtime WebSocket redeploys.** On `SIGTERM` the server returns `503` from `/health`, refuses new upgrades and tells clients to reconnect. Clients land on the new deployment with a fresh ticket.
-- **Safe migrations.** They run as Railway's pre-deploy step with drizzle-orm's runtime migrator under a Postgres advisory lock. Concurrent deploys can't apply a migration twice, and a failed migration aborts the deploy.
+- **Safe migrations.** They run as Railway's pre-deploy step *and* again at every process start, using drizzle-orm's runtime migrator under a Postgres advisory lock. When the schema is current this is a ~50 ms no-op, and web and ws starting together can't apply a migration twice. `/api/health` also reports a `schema` check, so an un-migrated database fails the deploy instead of failing users.
 - **Private networking.** Services talk to Postgres and Redis over Railway's private network (`*.railway.internal`). Redis connections use `family: 0` for dual-stack DNS, and the WebSocket server binds `::` with an IPv4 fallback.
 - **Proxy-aware origins.** Behind Railway's TLS-terminating edge, Next.js only knows its internal address. Redirects and the CSRF `Origin` check therefore use `APP_URL` (or trusted `X-Forwarded-*` headers), never `req.nextUrl.origin`.
 - **Cross-site WebSockets.** The `web` and `ws` domains are different sites, so the session cookie can't reach the socket host. The browser exchanges its cookie for a 60-second, WebSocket-only ticket on every (re)connect.

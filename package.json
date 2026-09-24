@@ -2,7 +2,7 @@
   "name": "matrix",
   "version": "0.1.0",
   "private": true,
-  "description": "Matrix — a real-time collaborative Kanban board built with Next.js, tRPC, Drizzle and TanStack Query.",
+  "description": "Matrix \u2014 a real-time collaborative Kanban board built with Next.js, tRPC, Drizzle and TanStack Query.",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -11,10 +11,10 @@
     "dev": "concurrently -n next,ws -c blue,magenta \"next dev\" \"tsx watch server/ws.ts\"",
     "dev:next": "next dev",
     "dev:ws": "tsx watch server/ws.ts",
-    "build": "next build",
+    "build": "next build && npm run build:server",
     "build:server": "esbuild server/ws.ts scripts/migrate.ts scripts/seed.ts --bundle --platform=node --format=esm --target=node22 --packages=external --sourcemap --outdir=dist --entry-names=[name] --out-extension:.js=.mjs",
-    "start": "next start",
-    "start:ws": "node --enable-source-maps dist/ws.mjs",
+    "start": "node --enable-source-maps dist/migrate.mjs && next start",
+    "start:ws": "node --enable-source-maps dist/migrate.mjs && node --enable-source-maps dist/ws.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",

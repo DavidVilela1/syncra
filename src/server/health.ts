@@ -11,7 +11,7 @@ export interface DependencyCheck {
 
 export interface HealthReport {
   status: "ok" | "degraded";
-  checks: { postgres: DependencyCheck; redis?: DependencyCheck };
+  checks: { postgres: DependencyCheck; schema: DependencyCheck; redis?: DependencyCheck };
   uptimeSeconds: number;
 }
 
@@ -54,6 +54,14 @@ let healthRedis: ReturnType<typeof createRedis> | undefined;
 export async function checkHealth(): Promise<HealthReport> {
   const { REDIS_URL } = env();
   const postgres = await timed(() => db.execute(sql`select 1`));
+  // Reachable-but-empty databases (migrations never ran) are the classic
+  // "site loads, every write fails" deploy. Surface it here instead.
+  const schema = await timed(async () => {
+    const [row] = await db.execute<{ ok: boolean }>(
+      sql`select to_regclass('public.demo_rooms') is not null and to_regclass('public.workspaces') is not null as ok`,
+    );
+    if (!row?.ok) throw new Error("tables missing: run `npm run db:migrate:prod` (migrations have not been applied)");
+  });
 
   let redis: DependencyCheck | undefined;
   if (REDIS_URL) {
@@ -62,10 +70,10 @@ export async function checkHealth(): Promise<HealthReport> {
     redis = await timed(() => client.ping());
   }
 
-  const ok = postgres.ok && (redis?.ok ?? true);
+  const ok = postgres.ok && schema.ok && (redis?.ok ?? true);
   return {
     status: ok ? "ok" : "degraded",
-    checks: redis ? { postgres, redis } : { postgres },
+    checks: redis ? { postgres, schema, redis } : { postgres, schema },
     uptimeSeconds: Math.round(process.uptime()),
   };
 }
