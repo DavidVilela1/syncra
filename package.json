@@ -12,8 +12,8 @@
     "dev:next": "next dev",
     "dev:ws": "tsx watch server/ws.ts",
     "build": "next build && npm run build:server",
-    "build:server": "esbuild server/ws.ts scripts/migrate.ts scripts/seed.ts --bundle --platform=node --format=esm --target=node22 --packages=external --sourcemap --outdir=dist --entry-names=[name] --out-extension:.js=.mjs",
-    "start": "node --enable-source-maps dist/migrate.mjs && next start",
+    "build:server": "esbuild server/app.ts server/ws.ts scripts/migrate.ts scripts/seed.ts --bundle --platform=node --format=esm --target=node22 --packages=external --sourcemap --outdir=dist --entry-names=[name] --out-extension:.js=.mjs",
+    "start": "node --enable-source-maps dist/migrate.mjs && node --enable-source-maps dist/app.mjs",
     "start:ws": "node --enable-source-maps dist/migrate.mjs && node --enable-source-maps dist/ws.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -22,7 +22,8 @@
     "db:migrate:prod": "node --enable-source-maps dist/migrate.mjs",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
-    "db:seed:prod": "node --enable-source-maps dist/seed.mjs"
+    "db:seed:prod": "node --enable-source-maps dist/seed.mjs",
+    "start:next": "next start"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

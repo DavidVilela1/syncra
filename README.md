@@ -150,14 +150,14 @@ Without `REDIS_URL`, realtime runs over Postgres `LISTEN/NOTIFY` and rate limiti
 
 ## Production architecture
 
-Deployed on **Railway** as two services built from the same repository, plus managed PostgreSQL and Redis.
+Deployed on **Railway** as a single app service plus managed PostgreSQL and Redis.
 
-| Service | Config | Build | Pre-deploy | Start | Healthcheck |
-|---|---|---|---|---|---|
-| `web` | `/railway/web.json` | `npm run build` (Next.js + server bundles) | `npm run db:migrate:prod` | `npm run start` (migrate, then `next start` on `$PORT`) | `GET /api/health` |
-| `ws` | `/railway/ws.json` | `npm run build:server` (esbuild bundle) | — | `npm run start:ws` (migrate, then `node dist/ws.mjs` on `$PORT`) | `GET /health` |
+| Service | Config | Build | Start | Healthcheck |
+|---|---|---|---|---|
+| `web` | `/railway/web.json` | `npm run build` (Next.js + server bundles) | `npm run start`: migrate, then `node dist/app.mjs` serves Next.js **and** WebSockets on `$PORT` | `GET /api/health` |
+| `ws` *(optional)* | `/railway/ws.json` | `npm run build:server` | `npm run start:ws`: dedicated socket server | `GET /health` |
 
-- **Two processes, two services.** Each gets its own port, domain, healthcheck and restart policy. A frontend deploy never drops a socket, and a WebSocket crash never takes pages down.
+- **One process by default, two when you need it.** `server/app.ts` mounts the authenticated WebSocket endpoint on the same HTTP server as Next.js, so the page and its socket share one origin: there is no second domain and no build-time WS URL to get wrong. The realtime layer (`attachRealtime`) is shared with `server/ws.ts`, so sockets can move to their own service later without code changes. A decoy `httpServer` stops Next.js from attaching its own dev-only `upgrade` handler, which would otherwise close our sockets.
 - **Deep healthchecks.** Both endpoints return `200` only when Postgres (and Redis, if configured) respond. A mis-wired deploy never replaces a healthy one.
 - **Zero-downtime WebSocket redeploys.** On `SIGTERM` the server returns `503` from `/health`, refuses new upgrades and tells clients to reconnect. Clients land on the new deployment with a fresh ticket.
 - **Safe migrations.** They run as Railway's pre-deploy step *and* again at every process start, using drizzle-orm's runtime migrator under a Postgres advisory lock. When the schema is current this is a ~50 ms no-op, and web and ws starting together can't apply a migration twice. `/api/health` also reports a `schema` check, so an un-migrated database fails the deploy instead of failing users.

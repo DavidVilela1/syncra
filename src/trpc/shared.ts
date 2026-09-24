@@ -15,6 +15,18 @@ export function getHttpUrl(): string {
   return `${origin}/api/trpc`;
 }
 
+/**
+ * WebSocket endpoint. When NEXT_PUBLIC_WS_URL is unset (single-service
+ * deployment, server/app.ts), the socket lives on the SAME origin as the page,
+ * so derive it from the address bar: https → wss, http → ws. Local dev sets
+ * NEXT_PUBLIC_WS_URL=ws://localhost:3001 because `npm run dev` runs two processes.
+ */
 export function getWsUrl(): string {
-  return process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001";
+  const configured = process.env.NEXT_PUBLIC_WS_URL;
+  if (configured && configured.trim() !== "") return configured;
+  if (typeof window !== "undefined") {
+    const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${scheme}//${window.location.host}`;
+  }
+  return "ws://localhost:3001";
 }
